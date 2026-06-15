@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/database"
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/event"
@@ -26,6 +27,14 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		panic(err)
+	}
+
+	if err := ensureWalletSchema(db); err != nil {
+		log.Fatalf("failed to initialize wallet schema: %v", err)
+	}
 
 	configMap := ckafka.ConfigMap{
 		"bootstrap.servers": "kafka:29092",
@@ -68,4 +77,34 @@ func main() {
 
 	fmt.Println("Server is running")
 	webserver.Start()
+}
+func ensureWalletSchema(db *sql.DB) error {
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS clients (
+      id VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      created_at DATETIME NOT NULL
+    )`,
+		`CREATE TABLE IF NOT EXISTS accounts (
+      id VARCHAR(255) PRIMARY KEY,
+      client_id VARCHAR(255) NOT NULL,
+      balance DOUBLE NOT NULL,
+      created_at DATETIME NOT NULL
+    )`,
+		`CREATE TABLE IF NOT EXISTS transactions (
+      id VARCHAR(255) PRIMARY KEY,
+      account_id_from VARCHAR(255) NOT NULL,
+      account_id_to VARCHAR(255) NOT NULL,
+      amount DOUBLE NOT NULL,
+      created_at DATETIME NOT NULL
+    )`,
+	}
+
+	for _, stmt := range statements {
+		if _, err := db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
 }

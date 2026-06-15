@@ -1,0 +1,52 @@
+### Create a client
+POST http://localhost:8080/clients
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "johndoe@email.com"
+}
+
+> {% 
+const body = JSON.parse(response.body);
+client.global.set("clientId", body.ID || body.id);
+%}
+
+### Create source account
+POST http://localhost:8080/accounts
+Content-Type: application/json
+
+{
+  "client_id": "{{clientId}}"
+}
+
+> {% 
+const body = JSON.parse(response.body);
+client.global.set("sourceAccountId", body.ID || body.id);
+%}
+
+### Create destination account
+POST http://localhost:8080/accounts
+Content-Type: application/json
+
+{
+  "client_id": "{{clientId}}"
+}
+
+> {% 
+const body = JSON.parse(response.body);
+client.global.set("destinationAccountId", body.ID || body.id);
+%}
+
+### Credit destination account
+POST http://localhost:8080/transactions
+Content-Type: application/json
+
+{
+  "account_id_from": "{{sourceAccountId}}",
+  "account_id_to": "{{destinationAccountId}}",
+  "amount": 50.0
+}
+
+### Get balance
+GET http://localhost:3003/balances/{{destinationAccountId}}

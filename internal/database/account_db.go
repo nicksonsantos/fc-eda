@@ -37,6 +37,9 @@ func (a *AccountDB) FindByID(id string) (*entity.Account, error) {
 		&client.Email,
 		&client.CreatedAt)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &account, nil

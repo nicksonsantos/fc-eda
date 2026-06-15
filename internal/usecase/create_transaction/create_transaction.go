@@ -2,6 +2,7 @@ package create_transaction
 
 import (
 	"context"
+	"fmt"
 
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/entity"
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/gateway"
@@ -61,9 +62,15 @@ func (uc *CreateTransactionUseCase) Execute(ctx context.Context, input CreateTra
 		if err != nil {
 			return err
 		}
+		if accountFrom == nil {
+			return fmt.Errorf("account_id_from not found: %s", input.AccountIDFrom)
+		}
 		accountTo, err := accountRepository.FindByID(input.AccountIDTo)
 		if err != nil {
 			return err
+		}
+		if accountTo == nil {
+			return fmt.Errorf("account_id_to not found: %s", input.AccountIDTo)
 		}
 		transaction, err := entity.NewTransaction(accountFrom, accountTo, input.Amount)
 		if err != nil {
