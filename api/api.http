@@ -1,0 +1,40 @@
+### Create a client
+POST http://localhost:8080/clients
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+
+### Create account 1 for client-1
+POST http://localhost:8080/accounts
+Content-Type: application/json
+
+{
+  "client_id": "client-1"
+}
+
+### Create account 2 for client-1
+POST http://localhost:8080/accounts
+Content-Type: application/json
+
+{
+  "client_id": "client-1"
+}
+
+### Create a transaction from account-1 to account-2
+POST http://localhost:8080/transactions
+Content-Type: application/json
+
+{
+  "account_id_from": "account-1",
+  "account_id_to": "account-2",
+  "amount": 25
+}
+
+### Query balance for account-1
+GET http://localhost:3003/balances/account-1
+
+### Query balance for account-2
+GET http://localhost:3003/balances/account-2

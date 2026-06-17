@@ -37,6 +37,14 @@ func main() {
 		log.Fatalf("database ping failed: %v", err)
 	}
 
+	if err := ensureBalanceSchema(db); err != nil {
+		log.Fatalf("failed to initialize balances schema: %v", err)
+	}
+
+	if err := seedBalancesData(db); err != nil {
+		log.Fatalf("failed to seed balances data: %v", err)
+	}
+
 	balanceDB := database.NewBalanceDB(db)
 	consumer := kafka.NewConsumer(kafkaBrokers, []string{"balances"})
 	processor := kafka.NewBalanceMessageProcessor(balanceDB)
@@ -65,6 +73,38 @@ func main() {
 	}
 
 	log.Fatal(srv.ListenAndServe())
+}
+
+func ensureBalanceSchema(db *sql.DB) error {
+	statements := []string{
+		`CREATE DATABASE IF NOT EXISTS balances`,
+		`USE balances`,
+		`CREATE TABLE IF NOT EXISTS balances (
+		  account_id VARCHAR(255) NOT NULL PRIMARY KEY,
+		  balance DOUBLE NOT NULL DEFAULT 0
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+	}
+
+	for _, stmt := range statements {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to execute schema statement: %w", err)
+		}
+	}
+	return nil
+}
+
+func seedBalancesData(db *sql.DB) error {
+	statements := []string{
+		`INSERT IGNORE INTO balances.balances (account_id, balance) VALUES ('account-1', 100.0)`,
+		`INSERT IGNORE INTO balances.balances (account_id, balance) VALUES ('account-2', 50.0)`,
+	}
+
+	for _, stmt := range statements {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to seed balances data: %w", err)
+		}
+	}
+	return nil
 }
 
 func getenv(key, fallback string) string {

@@ -29,6 +29,7 @@ services:
       - '3306:3306'
     volumes:
       - .docker/mysql:/var/lib/mysql
+      - ./docker-init-wallet:/docker-entrypoint-initdb.d
 
   balances-mysql:
     image: mysql:5.7

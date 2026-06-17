@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/database"
 	"github.com.br/devfullcycle/fc-ms-wallet/internal/event"
@@ -28,12 +29,16 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		panic(err)
+	if err := waitForDatabase(db, 30, 1*time.Second); err != nil {
+		log.Fatalf("database ping failed: %v", err)
 	}
 
 	if err := ensureWalletSchema(db); err != nil {
 		log.Fatalf("failed to initialize wallet schema: %v", err)
+	}
+
+	if err := seedWalletData(db); err != nil {
+		log.Fatalf("failed to seed wallet data: %v", err)
 	}
 
 	configMap := ckafka.ConfigMap{
@@ -107,4 +112,29 @@ func ensureWalletSchema(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+func seedWalletData(db *sql.DB) error {
+	statements := []string{
+		`INSERT IGNORE INTO clients (id, name, email, created_at) VALUES ('client-1', 'Alice', 'alice@example.com', NOW())`,
+		`INSERT IGNORE INTO accounts (id, client_id, balance, created_at) VALUES ('account-1', 'client-1', 100.0, NOW())`,
+		`INSERT IGNORE INTO accounts (id, client_id, balance, created_at) VALUES ('account-2', 'client-1', 50.0, NOW())`,
+	}
+
+	for _, stmt := range statements {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to seed wallet data: %w", err)
+		}
+	}
+	return nil
+}
+
+func waitForDatabase(db *sql.DB, attempts int, interval time.Duration) error {
+	for i := 0; i < attempts; i++ {
+		if err := db.Ping(); err == nil {
+			return nil
+		}
+		time.Sleep(interval)
+	}
+	return fmt.Errorf("database ping failed after %d attempts", attempts)
 }
