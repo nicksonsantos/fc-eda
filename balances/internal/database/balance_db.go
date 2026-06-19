@@ -16,11 +16,25 @@ func NewBalanceDB(db *sql.DB) *BalanceDB {
 }
 
 func (r *BalanceDB) CreateOrUpdate(balance *entity.Balance) error {
-	query := `INSERT INTO balances (account_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = VALUES(balance)`
-	_, err := r.db.Exec(query, balance.AccountID, balance.Balance)
+	updateQuery := `UPDATE balances SET balance = ? WHERE account_id = ?`
+	result, err := r.db.Exec(updateQuery, balance.Balance, balance.AccountID)
 	if err != nil {
 		return fmt.Errorf("create or update balance failed: %w", err)
 	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("create or update balance failed: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		insertQuery := `INSERT INTO balances (account_id, balance) VALUES (?, ?)`
+		_, err := r.db.Exec(insertQuery, balance.AccountID, balance.Balance)
+		if err != nil {
+			return fmt.Errorf("create or update balance failed: %w", err)
+		}
+	}
+
 	return nil
 }
 

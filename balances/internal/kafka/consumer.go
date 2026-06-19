@@ -23,6 +23,11 @@ type balanceUpdatedPayload struct {
 	BalanceAccountIDTo   float64 `json:"balance_account_id_to"`
 }
 
+type balanceUpdatedEvent struct {
+	Name    string                `json:"Name"`
+	Payload balanceUpdatedPayload `json:"Payload"`
+}
+
 type BalanceMessageProcessor struct {
 	balanceDB *database.BalanceDB
 }
@@ -64,11 +69,12 @@ func (c *Consumer) Consume(process func(message *ckafka.Message) error) error {
 }
 
 func (p *BalanceMessageProcessor) Process(message *ckafka.Message) error {
-	payload := &balanceUpdatedPayload{}
-	if err := json.Unmarshal(message.Value, payload); err != nil {
+	msg := &balanceUpdatedEvent{}
+	if err := json.Unmarshal(message.Value, msg); err != nil {
 		return fmt.Errorf("failed to unmarshal kafka message: %w", err)
 	}
 
+	payload := msg.Payload
 	if payload.AccountIDFrom != "" {
 		err := p.balanceDB.CreateOrUpdate(&entity.Balance{AccountID: payload.AccountIDFrom, Balance: payload.BalanceAccountIDFrom})
 		if err != nil {
